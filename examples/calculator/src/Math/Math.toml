@@ -1,0 +1,3 @@
+name = "Math"
+alias = ["add", "sub", "mul", "div", "pow"]
+mods = ["add_fn", "sub_fn", "mul_fn", "div_fn", "pow_fn"]

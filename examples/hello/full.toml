@@ -1,0 +1,10 @@
+[kernel]
+name = "HelloApp"
+
+[[extensions]]
+name = "_main"
+path = "src/_main"
+
+[[extensions]]
+name = "Greeting"
+path = "src/Greeting"

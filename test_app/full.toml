@@ -1,0 +1,6 @@
+[kernel]
+name = "TestApp"
+
+[[extensions]]
+name = "Greeting"
+path = "src/Greeting"

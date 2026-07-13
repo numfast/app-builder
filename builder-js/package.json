@@ -1,0 +1,21 @@
+{
+  "name": "@numfast/app-builder",
+  "version": "1.0.0",
+  "description": "App Builder JS — Zero Import Architecture",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "cli": "node dist/070_CLI.js",
+    "test": "node test_bootstrap.js"
+  },
+  "files": [
+    "dist/"
+  ],
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  }
+}

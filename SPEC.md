@@ -1,56 +1,188 @@
 # App Builder Specification
 
+**Zero Import Architecture** — приложения собираются из функций, не из модулей.
+
+---
+
 ## 1. Концепция
-App Builder — это инструмент сборки приложений из микро-расширений.
-- **Extension:** Папка с `{Name}.toml`, `{Name}.py` и `_lib/`.
-- **Manifest ({Name}.toml):** Описывает имя, алиасы, моды (функции) и зависимости.
-- **Module ({Name}.py):** Плоский файл-адаптер. Только реэкспорт функций из `_lib/`. Никаких классов, никаких импортов других расширений.
-- **App Manifest (full.toml):** Описывает, какие расширения включить в приложение.
 
-## 2. Правила Кода
-1. **Flat Functions Only:** В публичных файлах (`{Name}.py`) только функции.
-2. **No Cross-Imports:** Расширения не знают друг о друге. Зависимости решаются через `depends` в TOML и порядок загрузки.
-3. **Lib Isolation:** Вся реализация лежит в `_lib/`.
-4. **Setup Hook:** Опциональная функция `setup(kernel)` для инициализации метаданных.
+App Builder — это компоновщик функций.
 
-## 3. Структура Приложения
-```text
+Единица архитектуры — **не Python-модуль**, а **зарегистрированная функция**.
+
+```
+файлы.py  →  Registry  →  Kernel.alias
+```
+
+- Каждый `.py` файл экспортирует функции через словарь `PUBLIC`
+- Builder читает файлы через `exec()` (не `import`)
+- Registry — единое пространство имён для всех компонентов
+- Kernel — плоский dict алиасов для пользователя
+
+---
+
+## 2. Zero Import Rule (Железное правило)
+
+**В файлах приложений и расширений НОЛЬ импортов.**
+
+Запрещены:
+```python
+import os                          # ❌
+from pathlib import Path           # ❌
+from ._lib.helper import func      # ❌
+from builder_core.kernel import K  # ❌
+```
+
+Разрешены:
+```python
+# Ничего. Вообще.
+
+def add(a, b):
+    return a + b
+
+PUBLIC = {"add": add}
+```
+
+**Единственное исключение** — стандартная библиотека в файлах, которые парсят TOML:
+```python
+import tomllib    # можно только в manifest-файлах
+```
+
+Больше никаких импортов. Нигде. Никогда.
+
+---
+
+## 3. Registry Pattern
+
+Каждый файл заканчивается словарём `PUBLIC`:
+
+```python
+# 010_kernel.py
+class Kernel:
+    def __init__(self):
+        self.alias = {}
+        self.metadata = {}
+
+PUBLIC = {"Kernel": Kernel}
+```
+
+```python
+# 020_manifest.py
+import tomllib
+
+def load_app_manifest(path):
+    ...
+
+PUBLIC = {"load_app_manifest": load_app_manifest}
+```
+
+Builder собирает Registry через bootloader:
+
+```python
+MAIN = {}
+for f in sorted(files):
+    ns = {}
+    exec(open(f).read(), ns)
+    if "PUBLIC" in ns:
+        MAIN.update(ns["PUBLIC"])
+```
+
+---
+
+## 4. Extension Pattern
+
+Расширение приложения — папка с `{Name}.toml` и `{Name}.py`.
+
+### {Name}.py
+```python
+def add(a, b):
+    return a + b
+
+def mul(a, b):
+    return a * b
+
+PUBLIC = {"add": add, "mul": mul}
+```
+
+### {Name}.toml
+```toml
+name = "Math"
+alias = ["add", "mul"]
+mods = ["add", "mul"]
+```
+
+**Никаких `from _lib.xxx import`**. Никаких `import`. Никаких `setup(kernel)`.
+Только плоские функции + PUBLIC.
+
+---
+
+## 5. Build Process
+
+```
+Bootloader:
+  for each .py in builder/:
+    exec() → MAIN.update(PUBLIC)
+
+Builder.build(app_dir):
+  1. Читает full.toml (через MAIN["load_app_manifest"])
+  2. Для каждого [[extensions]]:
+     a. Читает {Name}.toml
+     b. exec({Name}.py) → ext_PUBLIC
+     c. Регистрирует alias[i] → ext_PUBLIC[mods[i]] в Kernel
+  3. Возвращает Kernel
+```
+
+---
+
+## 6. Структура приложения
+
+```
 MyApp/
-├── full.toml          # App Manifest
-├── src/
-│   ├── _main/         # Entry Point
-│   │   ├── _main.toml
-│   │   ├── _main.py
-│   │   └── _lib/
-│   └── MyExt/         # Extension
-│       ├── MyExt.toml
-│       ├── MyExt.py
-│       └── _lib/
+  full.toml
+  src/
+    _main/
+      _main.toml
+      _main.py          # PUBLIC = {"start": start, ...}
+    Math/
+      Math.toml
+      Math.py           # PUBLIC = {"add": add, ...}
 ```
 
-## 4. Формат TOML
+---
 
-### Extension Manifest
-```toml
-name = "MyExt"
-alias = ["func1", "func2"]
-mods = ["func1_impl", "func2_impl"]
-depends = ["OtherExt"]
+## 7. Правила кода
+
+| Правило | Описание |
+|---------|----------|
+| Zero Import | Ни одного `import` в файлах приложений |
+| PUBLIC | Каждый файл экспортирует `PUBLIC = {name: func, ...}` |
+| No classes | Только плоские функции (исключение: Kernel — внутри Builder) |
+| No cross-ref | Расширения не знают друг о друге |
+| No setup() | Инициализация в PUBLIC, не через колбэк |
+| Flat alias | Все моды в одном плоском Kernel.alias |
+
+---
+
+## 8. Архитектура Builder
+
+```
+app-builder/
+  builder/
+    010_kernel.py      PUBLIC = {"Kernel": Kernel}
+    020_manifest.py    PUBLIC = {"load_app_manifest": ..., "load_extension_manifest": ...}
+    030_resolver.py    PUBLIC = {"resolve_order": ...}
+    040_loader.py      PUBLIC = {"load_extension": ...}
+    050_builder.py     PUBLIC = {"build": ...}
+    060_boot.py        PUBLIC = {"boot": ...}  (собирает MAIN)
+    070_cli.py         PUBLIC = {"main": ...}
+    __init__.py         # вызывает boot(), экспортирует MAIN
 ```
 
-### App Manifest
-```toml
-[kernel]
-name = "MyApp"
-singleton = true
-[[extensions]]
-name = "MyExt"
-path = "src/MyExt"
-```
+**Внутри builder/ нет импортов.** Только `PUBLIC`.
 
-## 5. Процесс Сборки (Builder Logic)
-1. Парсинг `full.toml`.
-2. Топологическая сортировка зависимостей.
-3. Загрузка расширений по порядку.
-4. Регистрация алиасов в едином Kernel (dict).
-5. Вызов `setup()` если есть.
+---
+
+## 9. NumFast application
+
+Приложение, написанное для App Builder, называется **NumFast application**.
+Спецификация — в `specs/numfast/`.

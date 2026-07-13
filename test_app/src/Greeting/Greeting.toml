@@ -1,0 +1,3 @@
+name = "Greeting"
+alias = ["hello", "_default"]
+mods = ["hello_fn", "default_fn"]

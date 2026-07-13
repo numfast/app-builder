@@ -1,0 +1,3 @@
+name = "_main"
+alias = ["_default"]
+mods = ["default_fn"]

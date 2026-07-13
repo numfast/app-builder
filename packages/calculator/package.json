@@ -1,0 +1,11 @@
+{
+  "name": "@numfast/calculator",
+  "version": "1.0.0",
+  "description": "Calculator built by App Builder from examples/calculator/",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,25 @@
+[kernel]
+name = "Calc"
+
+[[extensions]]
+name = "_main"
+path = "src/_main"
+
+[[extensions]]
+name = "Math"
+path = "src/Math"
+
+[[extensions]]
+name = "Trig"
+path = "src/Trig"
+
+[tests]
+add_2_3 = { mod = "add", args = [2, 3], expected = "5" }
+sub_10_4 = { mod = "sub", args = [10, 4], expected = "6" }
+mul_3_5 = { mod = "mul", args = [3, 5], expected = "15" }
+div_9_4 = { mod = "div", args = [9, 4], expected = "2.25" }
+pow_2_10 = { mod = "pow", args = [2, 10], expected = "1024" }
+sin_1 = { mod = "sin", args = [1], expected = "0.8414709848078965" }
+cos_1 = { mod = "cos", args = [1], expected = "0.5403023058681397" }
+pi = { mod = "pi", args = [], expected = "3.141592653589793" }
+help = { mod = "help", args = [], expected = "Calc usage: calc('2+2*3') -> '8'" }

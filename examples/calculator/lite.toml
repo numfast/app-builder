@@ -1,0 +1,27 @@
+[kernel]
+name = "CalcLite"
+singleton = true
+
+[[extensions]]
+name = "_kernel"
+path = "_kernel"
+
+[[extensions]]
+name = "Math"
+path = "src/Math"
+
+[[extensions]]
+name = "Test"
+path = "src/Test"
+
+[[extensions]]
+name = "_main"
+path = "src/_main"
+
+[extensions_meta.Test.tests]
+add = { expr = "2+2", expected = "4" }
+sub = { expr = "10-3", expected = "7" }
+mul = { expr = "6*7", expected = "42" }
+div = { expr = "15/3", expected = "5.0" }
+pow = { expr = "2**10", expected = "1024" }
+sqrt = { expr = "sqrt(144)", expected = "12.0" }

@@ -1,0 +1,30 @@
+[kernel]
+name = "AppBuilder"
+
+[[extensions]]
+name = "Kernel"
+path = "src/Kernel"
+
+[[extensions]]
+name = "Manifest"
+path = "src/Manifest"
+
+[[extensions]]
+name = "Resolver"
+path = "src/Resolver"
+
+[[extensions]]
+name = "Loader"
+path = "src/Loader"
+
+[[extensions]]
+name = "Builder"
+path = "src/Builder"
+
+[[extensions]]
+name = "Boot"
+path = "src/Boot"
+
+[[extensions]]
+name = "CLI"
+path = "src/CLI"

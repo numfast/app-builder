@@ -1,0 +1,4 @@
+name = "Trig"
+alias = ["sin", "cos", "tan", "pi"]
+mods = ["sin_fn", "cos_fn", "tan_fn", "pi_fn"]
+variables = ["pi"]

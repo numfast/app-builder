@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NumFast Calculator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .app {
+    width: 540px;
+    max-width: 96vw;
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  h1 {
+    font-size: 20px;
+    margin-bottom: 16px;
+    color: #7c7cff;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .controls input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #16213e;
+    color: #e0e0e0;
+    font-size: 15px;
+    outline: none;
+  }
+  .controls input:focus { border-color: #7c7cff; }
+  .controls input::placeholder { color: #666; }
+  .btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .btn-primary { background: #7c7cff; color: #fff; }
+  .btn-primary:hover { background: #6a6ae8; }
+  .btn-secondary { background: #2a2a4a; color: #ccc; }
+  .btn-secondary:hover { background: #3a3a5a; }
+  .history {
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .history::-webkit-scrollbar { width: 4px; }
+  .history::-webkit-scrollbar-track { background: transparent; }
+  .history::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  .entry {
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #16213e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .entry .problem { color: #aaa; font-family: 'Consolas', 'Courier New', monospace; }
+  .entry .answer {
+    color: #5f5;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 700;
+  }
+  .entry .answer.error { color: #f55; }
+  .stats {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+  }
+  .empty-msg {
+    color: #555;
+    text-align: center;
+    padding: 32px 0;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- Load @numfast/calculator from built npm package -->
+<script src="../../packages/calculator/index.js"></script>
+
+<div class="app">
+  <h1>NumFast Calculator</h1>
+  <p style="color:#666;font-size:12px;margin:-12px 0 16px;">
+    Powered by <strong>@numfast/calculator</strong> &middot; App Builder
+  </p>
+
+  <div class="controls">
+    <input type="text" id="exprInput" placeholder="Type: 2 + 2 * 3  or  sin(3.14)" autofocus>
+    <button class="btn btn-primary" id="btnRandom">Random</button>
+    <button class="btn btn-secondary" id="btnClear">Clear</button>
+  </div>
+
+  <div class="history" id="history">
+    <div class="empty-msg">Type an expression or click Random</div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+</div>
+
+<script>
+// Calc is available from the loaded package via window.Calc
+
+// --- Random generator (uses Calc from the built package) ---
+function randomProblem() {
+  var ops = [
+    { name: "add", arity: 2, display: "+" },
+    { name: "sub", arity: 2, display: "-" },
+    { name: "mul", arity: 2, display: "*" },
+    { name: "div", arity: 2, display: "/" },
+    { name: "pow", arity: 2, display: "^" },
+    { name: "sin", arity: 1, display: "sin" },
+    { name: "cos", arity: 1, display: "cos" },
+    { name: "tan", arity: 1, display: "tan" }
+  ];
+  var op = ops[Math.floor(Math.random() * ops.length)];
+
+  if (op.arity === 1) {
+    var x = (Math.random() * 6 - 3).toFixed(2);
+    return {
+      problem: op.display + "(" + x + ")",
+      compute: function() { return String(Calc.call(op.name, parseFloat(x))); }
+    };
+  }
+
+  if (op.name === "div") {
+    var a = Math.floor(Math.random() * 20) + 1;
+    var b = Math.floor(Math.random() * 10) + 1;
+    return {
+      problem: a + " " + op.display + " " + b,
+      compute: function() { return String(Calc.call(op.name, a, b)); }
+    };
+  }
+
+  var a = Math.floor(Math.random() * 20) + 1;
+  var b = Math.floor(Math.random() * 10) + 1;
+  return {
+    problem: a + " " + op.display + " " + b,
+    compute: function() { return String(Calc[op.name](a, b)); }
+  };
+}
+
+// --- UI ---
+var historyEl = document.getElementById('history');
+var exprInput = document.getElementById('exprInput');
+var statsEl = document.getElementById('stats');
+
+function addEntry(problem, answer) {
+  var empty = historyEl.querySelector('.empty-msg');
+  if (empty) empty.remove();
+
+  var entry = document.createElement('div');
+  entry.className = 'entry';
+  entry.innerHTML =
+    '<span class="problem">' + escapeHtml(problem) + '</span>' +
+    '<span class="answer ' + (answer.startsWith('Error') ? 'error' : '') + '">= ' + escapeHtml(answer) + '</span>';
+
+  historyEl.appendChild(entry);
+  historyEl.scrollTop = historyEl.scrollHeight;
+  updateStats();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function updateStats() {
+  var count = historyEl.querySelectorAll('.entry').length;
+  statsEl.textContent = count ? count + ' calculation' + (count === 1 ? '' : 's') : '';
+}
+
+function handleInput() {
+  var text = exprInput.value.trim();
+  if (!text) return;
+  // Use Calc.call('calc', ...) from the built Kernel
+  var answer = Calc.call('calc', text);
+  addEntry(text, answer);
+  exprInput.value = '';
+}
+
+function handleRandom() {
+  var p = randomProblem();
+  var answer = p.compute();
+  addEntry(p.problem, answer);
+}
+
+function handleClear() {
+  historyEl.innerHTML = '<div class="empty-msg">Type an expression or click Random</div>';
+  statsEl.textContent = '';
+}
+
+// --- Event listeners ---
+exprInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); handleInput(); }
+});
+
+document.getElementById('btnRandom').addEventListener('click', handleRandom);
+document.getElementById('btnClear').addEventListener('click', handleClear);
+
+// Initial random example
+setTimeout(handleRandom, 300);
+</script>
+</body>
+</html>

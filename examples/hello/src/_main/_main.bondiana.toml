@@ -1,0 +1,36 @@
+name = "_main"
+alias = ["_default"]
+mods = ["_default"]
+
+[kernel]
+name = "HelloWorld"
+singleton = true
+
+[[extensions]]
+name = "_kernel"
+path = "_kernel"
+
+[[extensions]]
+name = "_info"
+path = "_info"
+
+[[extensions]]
+name = "_main"
+path = "_main"
+
+[[extensions]]
+name = "Greeting"
+path = "Greeting"
+
+[[extensions]]
+name = "Bondiana"
+path = "Bondiana"
+
+[extensions_meta.Greeting]
+initial_name = "World"
+greeting_template = "Hello, {name}!"
+
+[extensions_meta.Bondiana]
+initial_first_name = "James"
+initial_last_name = "Bond"
+greeting_template = "{last}, {full}! From Russia with love."

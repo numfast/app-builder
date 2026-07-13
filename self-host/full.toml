@@ -1,7 +1,0 @@
-[kernel]
-name = "SelfHostedBuilder"
-singleton = true
-
-[[extensions]]
-name = "BuilderCore"
-path = "src/BuilderCore"

@@ -1,0 +1,3 @@
+name = "_main"
+alias = ["calc", "repl", "help", "_default"]
+mods = ["calc_fn", "repl_fn", "help_fn", "default_fn"]
