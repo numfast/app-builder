@@ -5,17 +5,7 @@
 
 
 def resolve_order(extensions):
-    """Сортирует расширения по depends.
-
-    Args:
-        extensions: список dict-ов с полями name и depends.
-
-    Returns:
-        Отсортированный список (зависимости раньше зависимых).
-
-    Raises:
-        RuntimeError: цикл или отсутствующая зависимость.
-    """
+    """Kahn: зависимости раньше зависимых. RuntimeError: цикл/нет зависимости."""
     if not extensions:
         return []
 
