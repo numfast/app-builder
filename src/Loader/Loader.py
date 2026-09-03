@@ -40,25 +40,27 @@ def load_extension(kernel, ext_dir, override_metadata=None):
     if not em["mods"]:
         return
 
-    # Загружаем .py через exec
+    # Загружаем .py через exec (читаем один раз)
     py_path = ext_dir / f"{ext_name}.py"
     if not py_path.exists():
         raise FileNotFoundError(f"Extension module not found: {py_path}")
 
-    ns = {}
-    exec(py_path.read_text(encoding="utf-8"), ns)
-
-    # Проверка на импорты (грубая, через строки)
     source = py_path.read_text(encoding="utf-8")
+
+    # Проверка на импорты ДО exec (только module-level, не внутри функций)
     for line in source.split("\n"):
+        if line.startswith((" ", "\t")):
+            continue
         stripped = line.strip()
-        if stripped.startswith(("import ", "from ")):
-            # Разрешён только import tomllib в manifest-файлах
-            if "tomllib" not in stripped:
-                raise RuntimeError(
-                    f"ImportError: {py_path.name} has '{stripped}'. "
-                    f"Extensions must NOT have imports."
-                )
+        # Разрешён только import tomllib в manifest-файлах
+        if stripped.startswith(("import ", "from ")) and "tomllib" not in stripped:
+            raise RuntimeError(
+                f"ImportError: {py_path.name} has '{stripped}'. "
+                f"Extensions must NOT have imports."
+            )
+
+    ns = {}
+    exec(source, ns)
 
     # Проверяем PUBLIC
     ext_public = ns.get("PUBLIC", {})
