@@ -1,32 +1,13 @@
 # Copyright (c) 2026 NumFast
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""Bootloader — собирает Registry из PUBLIC всех файлов builder'а.
-
-Сканирует директорию builder/, exec() каждый .py с инжектом MAIN,
-собирает PUBLIC в единый словарь MAIN.
-
-Использование:
-    from builder import MAIN
-    MAIN["build"]("my-app/")
-"""
+"""Bootloader — exec() всех .py директории, сбор PUBLIC в MAIN Registry."""
 
 from pathlib import Path
 
 
 def boot(builder_dir=None):
-    """Сканирует директорию, exec() все .py, собирает MAIN.
-
-    Каждый файл получает MAIN в своём globals, чтобы функции
-    могли обращаться к другим компонентам через MAIN["name"].
-
-    Args:
-        builder_dir: путь к директории builder/.
-                     Если None — определяется относительно этого файла.
-
-    Returns:
-        MAIN — единый словарь Registry {name: function, ...}
-    """
+    """Сканирует директорию, exec() все .py, собирает MAIN (файлы получают MAIN в globals)."""
     if builder_dir is None:
         builder_dir = Path(__file__).parent
 
