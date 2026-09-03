@@ -27,14 +27,11 @@ def load_app_manifest(path):
             raise FileNotFoundError(f"Base manifest not found: {base_path}")
         base = load_app_manifest(base_path)
 
-    # Kernel config
+    # Kernel config (ветка base+пустой k_data покрыта defaults ниже)
     k_data = data.get("kernel", {})
-    if base and not k_data:
-        kernel_name = base["kernel"]["name"]
-        singleton = base["kernel"]["singleton"]
-    else:
-        kernel_name = k_data.get("name", base["kernel"]["name"] if base else "App")
-        singleton = k_data.get("singleton", base["kernel"]["singleton"] if base else True)
+    base_kernel = base["kernel"] if base else {}
+    kernel_name = k_data.get("name", base_kernel.get("name", "App"))
+    singleton = k_data.get("singleton", base_kernel.get("singleton", True))
 
     # Extensions
     raw_exts = data.get("extensions", [])
@@ -54,14 +51,10 @@ def load_app_manifest(path):
     else:
         extensions = [dict(e) for e in raw_exts]
 
-    # Extensions meta
+    # Extensions meta (child поверх base)
     child_meta = data.get("extensions_meta", {})
-    if base:
-        merged = dict(base.get("extensions_meta", {}))
-        merged.update(child_meta)
-        extensions_meta = merged
-    else:
-        extensions_meta = dict(child_meta)
+    base_meta = base.get("extensions_meta", {}) if base else {}
+    extensions_meta = {**base_meta, **child_meta}
 
     # Tests
     tests = data.get("tests", {})
