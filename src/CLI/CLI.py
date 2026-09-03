@@ -26,9 +26,9 @@ def main():
         sys.exit(1)
 
     command = args[0]
+    app_dir = args[1] if len(args) > 1 else "."
 
     if command == "build":
-        app_dir = args[1] if len(args) > 1 else "."
         kernel = build(app_dir)
         print(f"Built: {kernel.metadata['_kernel']['name']}")
         print(f"Aliases: {len(kernel.alias)}")
@@ -46,7 +46,6 @@ def main():
             print(f"  {name}")
 
     elif command == "test":
-        app_dir = args[1] if len(args) > 1 else "."
         kernel = build(app_dir)
         tests = kernel.metadata.get("_tests", {})
         if not tests:
