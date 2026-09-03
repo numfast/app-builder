@@ -5,13 +5,7 @@
 
 
 class Kernel:
-    """Ядро приложения. Хранит алиасы, метаданные, переменные.
-
-    После сборки:
-      alias     — dict[name → function]
-      metadata  — dict[section → dict]
-      variables — set[alias_name]  (автовызов при чтении)
-    """
+    """Плоское пространство имён: alias → function, metadata, variables (автовызов)."""
 
     def __init__(self, name="App", singleton=True):
         self.alias: dict = {}
