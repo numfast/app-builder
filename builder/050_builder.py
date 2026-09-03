@@ -68,17 +68,11 @@ def build(app_dir):
     # Загрузка расширений по порядку
     for ref in ordered:
         ext_path = Path(ref["path"])
-        override_meta = dict(ref.get("metadata", {}))
+        override = {**ref.get("metadata", {}),
+                    **app.get("extensions_meta", {}).get(ext_path.name, {})}
 
-        meta_section = ext_path.name
-        app_meta = app.get("extensions_meta", {}).get(meta_section, {})
-        override_meta.update(app_meta)
-
-        load_extension(
-            kernel,
-            str(ext_path),
-            override_metadata=override_meta if override_meta else None,
-        )
+        load_extension(kernel, str(ext_path),
+                       override_metadata=override or None)
 
     if app.get("tests"):
         kernel.metadata["_tests"] = app["tests"]
