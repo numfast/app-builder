@@ -1,17 +1,82 @@
 # Copyright (c) 2026 NumFast
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""Loader -- exec() загрузчик расширений."""
+"""Loader -- exec() загрузчик расширений + AST import-guard."""
 
+import ast
+import importlib.util
+import sys
 from pathlib import Path
 
 
-def load_extension(kernel, ext_dir, override_metadata=None):
+def _cross_msg(label, ext_name, target, stmt):
+    """Громкая ошибка: что запрещено + как правильно через depends/alias."""
+    return (
+        f"ImportError: {label} in extension '{ext_name}' has forbidden '{stmt}'. "
+        f"Private import from another extension '{target}'. "
+        f"Cross-Extension Python imports are FORBIDDEN. "
+        f"Correct reuse via Builder: depends = [\"{target}\"] in {ext_name}.toml "
+        f"+ call at runtime via kernel alias (kernel.alias[\"<alias>\"]), "
+        f"never 'from {target}... import'. "
+        f"Allowed: own _lib (from _lib... / from . ...), stdlib, third-party (numpy)."
+    )
+
+
+def _is_installed(top):
+    """True если top — установленный модуль (stdlib/third-party), а не Extension."""
+    try:
+        return importlib.util.find_spec(top) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
+
+
+def _check_top(label, ext_name, own_names, others, *, top, dotted, stmt):
+    """Один абсолютный импорт: свой/сторонний — ok, чужой Extension — REJECT."""
+    if not top or top in own_names or top == "_lib":
+        return
+    parts = dotted.split(".")
+    if top in others or (len(parts) > 1 and parts[1] == "_lib" and not _is_installed(top)):
+        raise RuntimeError(_cross_msg(label, ext_name, top, stmt))
+
+
+def _check_extension_imports(source, *, ext_name, own_names, known_extensions, label):
+    """AST-скан одного файла: запрещает приватные cross-Extension импорты."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as e:
+        raise RuntimeError(f"SyntaxError: {label}: {e}")
+    others = set(known_extensions or ()) - set(own_names)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                _check_top(label, ext_name, own_names, others,
+                           top=(a.name or "").split(".")[0],
+                           dotted=a.name or "", stmt=f"import {a.name}")
+        elif isinstance(node, ast.ImportFrom):
+            if node.level and node.level > 0:
+                if node.level > 1:
+                    raise RuntimeError(
+                        f"ImportError: {label} in extension '{ext_name}' escapes "
+                        f"its folder ('from ..', level {node.level}). "
+                        f"Relative imports must stay inside own Extension "
+                        f"('from .x import' / 'from ._lib import'). "
+                        f"Cross-Extension reuse — only via depends + kernel alias."
+                    )
+                continue
+            mod = node.module or ""
+            _check_top(label, ext_name, own_names, others,
+                       top=mod.split(".")[0], dotted=mod,
+                       stmt=f"from {mod} import ...")
+
+
+def load_extension(kernel, ext_dir, override_metadata=None, known_extensions=None):
     """Загружает расширение через exec(), регистрирует функции в Kernel.
 
-    1. Читает {Name}.toml
-    2. exec({Name}.py) -> получает PUBLIC
-    3. Регистрирует alias[i] -> PUBLIC[mods[i]] в kernel
+    1. Читает {Name}.toml (depends/alias/mods)
+    2. AST-скан {Name}.py + _lib/**/*.py (import-guard: чужие Extensions запрещены,
+       свой _lib/relative/stdlib/third-party разрешены)
+    3. exec({Name}.py) с изолированным sys.path (свой _lib виден, чужие — нет)
+    4. Регистрирует alias[i] -> PUBLIC[mods[i]], вызывает setup(kernel)
     """
     ext_dir = Path(ext_dir).resolve()
     ext_name = ext_dir.name
@@ -40,27 +105,41 @@ def load_extension(kernel, ext_dir, override_metadata=None):
     if not em["mods"]:
         return
 
-    # Загружаем .py через exec (читаем один раз)
+    # Загружаем .py (читаем один раз)
     py_path = ext_dir / f"{ext_name}.py"
     if not py_path.exists():
         raise FileNotFoundError(f"Extension module not found: {py_path}")
 
     source = py_path.read_text(encoding="utf-8")
 
-    # Проверка на импорты ДО exec (только module-level, не внутри функций)
-    for line in source.split("\n"):
-        if line.startswith((" ", "\t")):
-            continue
-        stripped = line.strip()
-        # Разрешён только import tomllib в manifest-файлах
-        if stripped.startswith(("import ", "from ")) and "tomllib" not in stripped:
-            raise RuntimeError(
-                f"ImportError: {py_path.name} has '{stripped}'. "
-                f"Extensions must NOT have imports."
-            )
+    # Import-guard ДО exec: entry + весь свой _lib
+    own = {ext_name, em["name"]}
+    known = set(known_extensions or ()) | own
+    _check_extension_imports(source, ext_name=em["name"], own_names=own,
+                             known_extensions=known, label=py_path.name)
+    lib_dir = ext_dir / "_lib"
+    if lib_dir.is_dir():
+        for f in sorted(lib_dir.rglob("*.py")):
+            if "__pycache__" in f.parts:
+                continue
+            rel = f.relative_to(lib_dir).as_posix()
+            _check_extension_imports(f.read_text(encoding="utf-8"), ext_name=em["name"],
+                                     own_names=own, known_extensions=known,
+                                     label=f"{ext_name}/_lib/{rel}")
 
-    ns = {}
-    exec(source, ns)
+    # exec с изоляцией: свой _lib виден через sys.path, чужие Extensions — нет
+    added = str(ext_dir)
+    sys.path.insert(0, added)
+    try:
+        ns = {}
+        exec(compile(source, str(py_path), "exec"), ns)
+    finally:
+        try:
+            sys.path.remove(added)
+        except ValueError:
+            pass
+        for mod in [m for m in sys.modules if m == "_lib" or m.startswith("_lib.")]:
+            del sys.modules[mod]
 
     # Проверяем PUBLIC
     ext_public = ns.get("PUBLIC", {})
@@ -75,6 +154,11 @@ def load_extension(kernel, ext_dir, override_metadata=None):
         kernel.register(alias_name, func, owner=em["name"])
         if alias_name in em["variables"]:
             kernel.variables.add(alias_name)
+
+    # setup(kernel): только metadata, вызывается после регистрации алиасов
+    setup_fn = ns.get("setup")
+    if callable(setup_fn):
+        setup_fn(kernel)
 
 
 PUBLIC = {"load_extension": load_extension}

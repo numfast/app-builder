@@ -186,3 +186,12 @@ app-builder/
 
 Приложение, написанное для App Builder, называется **NumFast application**.
 Спецификация — в `specs/numfast/`.
+
+---
+
+## 10. Поправка v0.2.1 (иерархия + import-guard, заменяет §2/§4 частично)
+
+- Extension = `{Name}.toml` + `{Name}.py` + `_lib/*.py`. Entry: `from _lib... import` + `PUBLIC` + `setup(kernel)` (только metadata, вызывается после регистрации алиасов).
+- Вложенность: пути в `full.toml` могут быть вложенными (`src/Core`, `src/Compute/Reduce`); общие хелперы — один раз на родительском/общем уровне, reuse — только через `depends` + вызов по `kernel.alias` в runtime.
+- Import-guard (AST, до exec, entry + весь `_lib`): запрещены `import <ДругойExt>._lib` / `from <ДругойExt>._lib import` / `from <ДругойExt> import` и `from ..` (побег). Ошибка громкая: что запрещено + как правильно (`depends` + `kernel.alias`). Разрешены: свой `_lib`, relative level 1, stdlib, third-party (numpy). `depends` НЕ легализует Python-импорт.
+- Загрузка изолирована: `sys.path` только свой каталог на время exec, `_lib` вычищается из `sys.modules` после (коллизий между Extensions нет).

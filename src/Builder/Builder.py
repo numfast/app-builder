@@ -65,6 +65,12 @@ def build(app_dir):
     # Топологическая сортировка
     ordered = resolve_order(ext_refs)
 
+    # Все имена — для import-guard (чужие Extensions запрещены к импорту)
+    known = set()
+    for ref in ext_refs:
+        known.add(ref["name"])
+        known.add(Path(ref["path"]).name)
+
     # Загрузка расширений по порядку
     for ref in ordered:
         ext_path = Path(ref["path"])
@@ -72,7 +78,8 @@ def build(app_dir):
                     **app.get("extensions_meta", {}).get(ext_path.name, {})}
 
         load_extension(kernel, str(ext_path),
-                       override_metadata=override or None)
+                       override_metadata=override or None,
+                       known_extensions=known)
 
     if app.get("tests"):
         kernel.metadata["_tests"] = app["tests"]
