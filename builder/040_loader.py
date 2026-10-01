@@ -39,6 +39,20 @@ def _check_top(label, ext_name, own_names, others, *, top, dotted, stmt):
         raise RuntimeError(_cross_msg(label, ext_name, top, stmt))
 
 
+def _evict_lib_modules():
+    """Выкидывает из sys.modules ключи _lib/_lib.*.
+
+    Инвариант изоляции симметричен: чужое расширение (или тест, дергающий
+    sys.path) мог оставить sys.modules['_lib'] привязанным к СВОЕМУ
+    каталогу _lib. Импорт ищет _lib.<mod> по уже закешированному
+    sys.modules['_lib'].__path__ и НЕ пересматривает sys.path, поэтому
+    exec() ниже подхватил бы чужой каталог. Вычистка до exec делает
+    видимым ровно свой _lib (свой ext_dir уже в sys.path[0]).
+    """
+    for mod in [m for m in sys.modules if m == "_lib" or m.startswith("_lib.")]:
+        del sys.modules[mod]
+
+
 def _check_extension_imports(source, *, ext_name, own_names, known_extensions, label):
     """AST-скан одного файла: запрещает приватные cross-Extension импорты."""
     try:
@@ -129,6 +143,7 @@ def load_extension(kernel, ext_dir, override_metadata=None, known_extensions=Non
 
     # exec с изоляцией: свой _lib виден через sys.path, чужие Extensions — нет
     added = str(ext_dir)
+    _evict_lib_modules()
     sys.path.insert(0, added)
     try:
         ns = {}
@@ -138,8 +153,7 @@ def load_extension(kernel, ext_dir, override_metadata=None, known_extensions=Non
             sys.path.remove(added)
         except ValueError:
             pass
-        for mod in [m for m in sys.modules if m == "_lib" or m.startswith("_lib.")]:
-            del sys.modules[mod]
+        _evict_lib_modules()
 
     # Проверяем PUBLIC
     ext_public = ns.get("PUBLIC", {})
