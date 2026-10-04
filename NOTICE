@@ -1,0 +1,41 @@
+NumFast App Builder
+Copyright (c) 2026 NumFast
+
+This product is licensed under the GNU Affero General Public License v3.0 only.
+The full licence text is in the file LICENSE at the root of this repository.
+
+--------------------------------------------------------------------------
+THIRD-PARTY LICENCES
+--------------------------------------------------------------------------
+
+This package has NO third-party runtime dependencies. It imports only the Python
+standard library and its own `builder` module. Every `.py`, `.ts` and `.js` file
+in this repository carries a 2026 NumFast copyright line; no third-party source
+tree is vendored here.
+
+JavaScript build tooling — development only, never distributed
+-------------------------------------------------------------
+  Component        Version used   SPDX licence   Where to read the text
+  --------------   ------------   -----------   ----------------------
+  typescript       7.0.2          Apache-2.0     ships with the package:
+                                                   node_modules/typescript/
+                                                   LICENSE.txt
+                                                   https://github.com/microsoft/TypeScript
+  @types/node      26.1.1         MIT            ships with the package:
+                                                   node_modules/@types/node/
+                                                   LICENSE
+                                                   https://github.com/DefinitelyTyped/DefinitelyTyped
+
+  Both are `devDependencies` of `builder-js/package.json` and exist only to type-check
+  and compile. Neither is imported at run time and neither is redistributed as
+  part of a published package.
+
+--------------------------------------------------------------------------
+A SEPARATE COMMERCIAL LICENCE
+--------------------------------------------------------------------------
+
+A proprietary commercial licence covering this same source is planned and is NOT
+YET FINALISED; no commercial terms are published in this repository. Until it is
+issued, the only grant available is the AGPL-3.0-only grant in LICENSE. The
+reasoning, and the questions still open, are recorded in `LICENCE_MODEL.md` in the
+`develop/audit_foundation/` directory of the NumFast dev-env repository.

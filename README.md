@@ -143,4 +143,13 @@ node dist/070_CLI.js test <app-dir>
 
 ## License
 
-AGPL-3.0-only
+**AGPL-3.0-only.** The full licence text is in [`LICENSE`](LICENSE) at the root of
+this repository — a verbatim copy of the GNU AGPL-3.0 text, also published at
+<https://www.gnu.org/licenses/agpl-3.0.txt>.
+
+Third-party licences in use are listed in [`NOTICE`](NOTICE). This package has no
+third-party runtime dependencies.
+
+A separate proprietary commercial licence covering the same source is planned and
+is **not yet finalised**; no commercial terms are published here. The only grant
+currently available is the AGPL-3.0-only grant above.
