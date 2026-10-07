@@ -2,10 +2,24 @@
 
 **Zero-Import Architecture** — Build applications from manifest-driven extensions.
 
+This is the extension framework that
+[NumFast](https://github.com/numfast/numfast) is itself built from: NumFast's 30
+Extensions and its entire Python API are Extensions loaded through it.
+
+**Not yet published to PyPI or npm.** There is no `pip install app-builder`
+and no `npm install @numfast/app-builder` — both names are currently free
+and unregistered. Use it from a checkout:
+
+```bash
+git clone https://github.com/numfast/app-builder
+cd app-builder
+python -c "import sys; sys.path.insert(0, '.'); from builder import build; print(build('full.toml'))"
+cd builder-js && npm install && npm run build   # the TypeScript build
 ```
-pip install app-builder           # Python
-npm install @numfast/app-builder  # Node.js (TypeScript)
-```
+
+Publishing is planned. Until then the `package + import` CI job in
+[numfast/numfast](https://github.com/numfast/numfast) cannot resolve `app-builder` from
+an index, which is why that workflow is disabled at present.
 
 ---
 
