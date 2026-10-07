@@ -41,10 +41,9 @@ App Builder is a meta-framework for assembling applications from **Extension** c
 ```
 full.toml                    Kernel (flat namespace)
 ├── Extension A              ┌─────────────────────┐
-├── Extension B       ──►   │ get("Map")  -> fn   │
+├── Extension B       ──►    │ get("Map")  -> fn   │
 ├── Extension C              │ get("Reduce") -> fn │
-└── ...                      │ get("compile") -> fn│
-                             └─────────────────────┘
+└── ...                      └─────────────────────┘
 ```
 
 Each extension is a directory with:
